@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة المدير العام - المشاعل</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:Cairo,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#0b1220;color:#eef2ff}
+    header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#0f172a;position:sticky;top:0;border-bottom:1px solid #233054}
+    header .brand{font-weight:800;letter-spacing:.4px}
+    header nav a{color:#9fb4ff;margin-inline:8px;text-decoration:none}
+    .container{max-width:1200px;margin:22px auto;padding:0 16px}
+    .card{background:#111a33;border:1px solid #263458;border-radius:14px;padding:16px;margin-bottom:16px}
+    .grid{display:grid;gap:14px}
+    @media(min-width:1000px){.grid{grid-template-columns:1.1fr .9fr}}
+    input,select,button,textarea{background:#0f1a34;color:#eaf0ff;border:1px solid #2a3c64;border-radius:10px;padding:10px 12px}
+    button{cursor:pointer;background:#3757ff;border-color:#4a66ff}
+    button.secondary{background:#132146}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #233054}
+    .muted{color:#a8b3d6}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#132146;color:#9fb4ff;border:1px solid #233054}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .flex{display:flex;align-items:center;gap:8px}
+    .right{margin-inline-start:auto}
+    .ok{color:#22c55e}.warn{color:#f59e0b}.err{color:#ef4444}
+    .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .kpi .card{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+    .kpi .num{font-size:28px;font-weight:800}
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">المشاعل • لوحة المدير العام ⭐</div>
+    <nav>
+      <button id="btn-meeting" class="secondary">اجتماع المعلمين/الإدارة</button>
+      <a href="index.html">تسجيل الخروج</a>
+      <a href="dashboard-student.html">لوحة الطالب</a>
+      <a href="dashboard-teacher.html">لوحة المعلم</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div id="meeting-modal" class="card" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:100; min-width:350px; max-width:80%; padding:20px;">
+      <h2>تحديد موعد اجتماع</h2>
+      <input id="meeting-time" type="datetime-local" style="width:100%; margin-bottom:10px;"/>
+      <textarea id="meeting-agenda" placeholder="أجندة الاجتماع (اختياري)" style="width:100%; margin-bottom:10px;"></textarea>
+      <button id="send-meeting-wa" class="ok" style="width:100%">إرسال تنبيه عبر واتساب</button>
+      <button id="close-meeting-modal" class="secondary" style="width:100%; margin-top:10px;">إلغاء</button>
+    </div>
+    <section class="kpi">
+      <div class="card"><div class="muted">عدد الطلاب</div><div id="kpiStudents" class="num">—</div></div>
+      <div class="card"><div class="muted">عدد المعلمين</div><div id="kpiTeachers" class="num">—</div></div>
+      <div class="card"><div class="muted">مواد نشطة</div><div id="kpiSubjects" class="num">—</div></div>
+      <div class="card"><div class="muted">اختبارات هذا الشهر</div><div id="kpiExams" class="num">—</div></div>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>إدارة الجدول والحصص</h2>
+        <p class="muted">ملاحظة: سيتم عرض صورة الجدول هنا لاحقاً بدلاً من الإدخال اليدوي، ولكن الإدخال اليدوي ضروري لربط الحصص بالتحليلات.</p>
+        <div class="row">
+          <input id="gradeName" placeholder="اسم الصف (مثال: الثالث متوسط)"/>
+          <input id="className" placeholder="اسم الشعبة (مثال: أ)"/>
+          <input id="subjectName" placeholder="المادة"/>
+          <input id="teacherId" placeholder="معرّف المعلم"/>
+          <input id="period" placeholder="رقم الحصة" type="number"/>
+          <input id="time" placeholder="الوقت (08:00 - 08:45)"/>
+          <input id="room" placeholder="الغرفة"/>
+          <button id="addLesson">إضافة حصة</button>
+        </div>
+        <p class="muted">يتم الحفظ إلى مجموعة schedules مع مفاتيح gradeId/classId/subject/teacherId.</p>
+        <table>
+          <thead><tr><th>الصف/الشعبة</th><th>المادة</th><th>المعلم</th><th>الحصة</th><th>الوقت</th><th>الغرفة</th></tr></thead>
+          <tbody id="lessonsTable"></tbody>
+        </table>
+      </section>
+
+      <aside class="card">
+        <h2>نتائج واختبارات</h2>
+        <div class="row">
+          <input id="examTitle" placeholder="عنوان الاختبار"/>
+          <input id="examDate" type="date"/>
+          <button id="addExam">إضافة اختبار</button>
+        </div>
+        <ul id="examsList"></ul>
+        <hr />
+        <h3>رفع نتيجة لطالب</h3>
+        <div class="row">
+          <input id="resStudentId" placeholder="رقم الطالب"/>
+          <input id="resSubject" placeholder="المادة"/>
+          <input id="resScore" type="number" placeholder="درجة"/>
+          <button id="addResult">حفظ النتيجة</button>
+        </div>
+      </aside>
+    </div>
+
+    <section class="card">
+      <h2>تحليلات الأداء</h2>
+      <div class="row">
+        <select id="analyticsSubject"><option value="">اختر مادة</option></select>
+        <button id="runAnalytics">تشغيل التحليلات</button>
+        <span id="analyticsSummary" class="pill right">—</span>
+      </div>
+      <table>
+        <thead><tr><th>الطالب</th><th>المادة</th><th>المعدل</th><th>أحدث نتيجة</th></tr></thead>
+        <tbody id="analyticsBody"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    // إضافة أنماط للزر الجديد والنافذة المنبثقة
+    document.head.insertAdjacentHTML('beforeend', `
+      <style>
+        #btn-meeting { background: #3b82f6; color: white; border-color: #2563eb; }
+        #btn-meeting:hover { background: #2563eb; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 99; display: none; }
+      </style>
+    `);
+    document.body.insertAdjacentHTML('afterbegin', '<div class="modal-overlay" id="modal-overlay"></div>');
+
+    // منطق زر الاجتماع (للمدير فقط)
+    document.getElementById('btn-meeting').addEventListener('click', () => {
+      document.getElementById('modal-overlay').style.display = 'block';
+      document.getElementById('meeting-modal').style.display = 'block';
+    });
+
+    document.getElementById('close-meeting-modal').addEventListener('click', () => {
+      document.getElementById('modal-overlay').style.display = 'none';
+      document.getElementById('meeting-modal').style.display = 'none';
+    });
+
+    document.getElementById('send-meeting-wa').addEventListener('click', () => {
+      const time = document.getElementById('meeting-time').value;
+      const agenda = document.getElementById('meeting-agenda').value || 'لا يوجد أجندة محددة.';
+      if (!time) {
+        alert('الرجاء تحديد موعد الاجتماع.');
+        return;
+      }
+
+      const formattedTime = new Date(time).toLocaleString('ar-EG', { dateStyle: 'full', timeStyle: 'short' });
+      const message = encodeURIComponent(`🚨 تنبيه اجتماع عاجل (للمعلمين والإدارة) 🚨\n\n*الموعد:* ${formattedTime}\n*الأجندة:* ${agenda}\n\nالرجاء الحضور في الموعد المحدد.`);
+
+      // رقم الواتساب الخاص بالمدير أو رقم المجموعة (هنا نستخدم رقم افتراضي)
+      window.open(`https://wa.me/966566079856?text=${message}`, '_blank');
+      document.getElementById('close-meeting-modal').click();
+    });
+
+    
+    const firebaseConfig = { apiKey:"", authDomain:"", projectId:"", appId:"" };
+    let app, db, auth;
+    try { app = firebase.initializeApp(firebaseConfig); db = firebase.firestore(); auth = firebase.auth(); }
+    catch(e){ console.warn('Firebase لم يُهيأ بعد.'); }
+
+    function idFromName(name){ return name?.trim().toLowerCase().replace(/\s+/g,'-') || ''; }
+
+    async function loadKPIs(){ if(!db) return; 
+      const s = await db.collection('students').get();
+      const t = await db.collection('teachers').get();
+      const sub = await db.collection('subjects').get();
+      const ex = await db.collection('exams').where('date','>=', new Date(new Date().getFullYear(), new Date().getMonth(), 1)).get();
+      document.getElementById('kpiStudents').textContent = s.size;
+      document.getElementById('kpiTeachers').textContent = t.size;
+      document.getElementById('kpiSubjects').textContent = sub.size;
+      document.getElementById('kpiExams').textContent = ex.size;
+    }
+
+    async function addLesson(){
+      const gradeName=document.getElementById('gradeName').value; const className=document.getElementById('className').value;
+      const subject=document.getElementById('subjectName').value; const teacherId=document.getElementById('teacherId').value;
+      const period=Number(document.getElementById('period').value); const time=document.getElementById('time').value; const room=document.getElementById('room').value;
+      if(!db||!gradeName||!className||!subject||!teacherId||!period||!time) return alert('أكمل الحقول');
+      const gradeId=idFromName(gradeName), classId=idFromName(className);
+      await db.collection('schedules').add({ gradeId,classId,subject,teacherId,period,time,room, createdAt:new Date() });
+      document.querySelectorAll('#gradeName,#className,#subjectName,#teacherId,#period,#time,#room').forEach(el=>el.value='');
+      loadLessons();
+    }
+
+    async function loadLessons(){ if(!db) return; const tbody=document.getElementById('lessonsTable'); tbody.innerHTML='';
+      const q=await db.collection('schedules').orderBy('createdAt','desc').limit(20).get();
+      q.forEach(doc=>{ const s=doc.data(); const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${s.gradeId}/${s.classId}</td><td>${s.subject}</td><td>${s.teacherId}</td><td>${s.period}</td><td>${s.time}</td><td>${s.room||''}</td>`; tbody.appendChild(tr); });
+    }
+
+    async function addExam(){ const title=document.getElementById('examTitle').value; const date=document.getElementById('examDate').value; if(!db||!title||!date) return; await db.collection('exams').add({ title, date:new Date(date) }); document.getElementById('examTitle').value=''; loadExams(); }
+    async function loadExams(){ if(!db) return; const ul=document.getElementById('examsList'); ul.innerHTML=''; const q=await db.collection('exams').orderBy('date','desc').limit(10).get(); q.forEach(d=>{ const li=document.createElement('li'); const e=d.data(); li.textContent = `${e.title} - ${new Date(e.date.toDate ? e.date.toDate(): e.date).toLocaleDateString('ar-EG')}`; ul.appendChild(li); }); }
+
+    async function addResult(){ const id=document.getElementById('resStudentId').value.trim(); const subject=document.getElementById('resSubject').value.trim(); const score=Number(document.getElementById('resScore').value);
+      if(!db||!id||!subject||Number.isNaN(score)) return alert('أكمل الحقول'); await db.collection('students').doc(id).collection('grades').add({ subject, score, createdAt:new Date(), source:'admin' }); document.getElementById('resStudentId').value=''; document.getElementById('resSubject').value=''; document.getElementById('resScore').value=''; }
+
+    async function loadSubjectsIntoSelect(){ if(!db) return; const sel=document.getElementById('analyticsSubject'); const subs=await db.collection('subjects').get(); subs.forEach(s=>{ const o=document.createElement('option'); o.value=s.id; o.textContent=s.data().name||s.id; sel.appendChild(o);}); }
+
+    async function runAnalytics(){ if(!db) return; const subject=document.getElementById('analyticsSubject').value; const tbody=document.getElementById('analyticsBody'); tbody.innerHTML='';
+      let q=db.collectionGroup('grades'); if(subject) q=q.where('subject','==',subject); const snap=await q.get();
+      const map=new Map(); snap.forEach(d=>{ const g=d.data(); const sid=d.ref.parent.parent?.id||g.studentId; if(!map.has(sid)) map.set(sid, []); map.get(sid).push(g); });
+      let allScores=[]; for(const [sid, arr] of map.entries()){ const scores=arr.map(x=>x.score).filter(x=>typeof x==='number'); const avg = scores.reduce((a,b)=>a+b,0)/(scores.length||1); allScores.push(...scores); const latest=arr.sort((a,b)=> (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))[0]; const tr=document.createElement('tr'); tr.innerHTML=`<td>${sid}</td><td>${subject||'الكل'}</td><td>${avg.toFixed(1)}</td><td>${latest? latest.score: ''}</td>`; tbody.appendChild(tr); }
+      const schoolAvg = allScores.reduce((a,b)=>a+b,0)/(allScores.length||1); document.getElementById('analyticsSummary').textContent = `متوسط المدرسة: ${isFinite(schoolAvg)? schoolAvg.toFixed(1): '—'}`;
+    }
+
+    document.getElementById('addLesson').addEventListener('click', addLesson);
+    document.getElementById('addExam').addEventListener('click', addExam);
+    document.getElementById('addResult').addEventListener('click', addResult);
+    document.getElementById('runAnalytics').addEventListener('click', runAnalytics);
+
+    loadKPIs(); loadLessons(); loadExams(); loadSubjectsIntoSelect();
+  </script>
+</body>
+</html>

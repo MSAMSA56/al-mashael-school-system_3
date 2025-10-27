@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة المعلم - المشاعل</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:Cairo,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#0b1220;color:#eef2ff}
+    header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#0f172a;position:sticky;top:0;border-bottom:1px solid #233054}
+    header .brand{font-weight:800;letter-spacing:.4px}
+    header nav a{color:#9fb4ff;margin-inline:8px;text-decoration:none}
+    .container{max-width:1100px;margin:22px auto;padding:0 16px}
+    .card{background:#111a33;border:1px solid #263458;border-radius:14px;padding:16px;margin-bottom:16px}
+    .grid{display:grid;gap:14px}
+    @media(min-width:900px){.grid{grid-template-columns:1.2fr .8fr}}
+    input,select,button,textarea{background:#0f1a34;color:#eaf0ff;border:1px solid #2a3c64;border-radius:10px;padding:10px 12px}
+    button{cursor:pointer;background:#3757ff;border-color:#4a66ff}
+    button.secondary{background:#132146}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #233054}
+    .muted{color:#a8b3d6}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#132146;color:#9fb4ff;border:1px solid #233054}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .flex{display:flex;align-items:center;gap:8px}
+    .right{margin-inline-start:auto}
+    .ok{color:#22c55e}.warn{color:#f59e0b}.err{color:#ef4444}
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">المشاعل • لوحة المعلم 👨‍🏫</div>
+    <nav>
+      <a href="#" id="profileLink">حسابي الشخصي</a>
+      <a href="#" id="chatLink">غرف المحادثة</a>
+      <a href="index.html">تسجيل الخروج</a>
+      <a href="dashboard-student.html">لوحة الطالب</a>
+      <a href="dashboard-admin.html">لوحة الإدارة</a>
+      <a href="dashboard-manager.html">لوحة المدير العام</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <section class="card">
+        <h2>إدارة الواجبات والامتحانات</h2>
+        <div class="row">
+          <select id="assignType">
+            <option value="homework">واجب</option>
+            <option value="exam">امتحان</option>
+          </select>
+          <select id="assignGrade">
+            <option value="">اختر المرحلة</option>
+            <option value="ثانوي-1">أول ثانوي</option>
+            <option value="ثانوي-2">ثاني ثانوي</option>
+            <option value="ثانوي-3">ثالث ثانوي</option>
+          </select>
+          <input id="assignSubject" placeholder="المادة (مثال: رياضيات)" />
+          <input id="assignLink" placeholder="رابط الواجب/الامتحان (URL)" />
+          <button id="publishAssignment">نشر الواجب/الامتحان</button>
+        </div>
+        <p class="muted">يتم إرسال إشعار للطالب بوصول رابط الواجب/الامتحان. يجب على الطالب الضغط على الرابط ليتم تسجيله كـ "تم الحل".</p>
+      </section>
+
+      <aside class="card">
+        <h2>تسجيل الحضور والغياب</h2>
+        <div class="row">
+          <select id="attendanceGrade">
+            <option value="">اختر الصف</option>
+          </select>
+          <select id="attendanceClass">
+            <option value="">اختر الشعبة</option>
+          </select>
+          <button id="loadStudentsForAttendance">تحميل الطلاب</button>
+        </div>
+        <table id="attendanceTable">
+          <thead><tr><th>الطالب</th><th>حالة الحضور</th><th>تسجيل</th></tr></thead>
+          <tbody id="attendanceBody"></tbody>
+        </table>
+        <button id="saveAttendance" style="margin-top: 10px;">حفظ الحضور/الغياب</button>
+      </aside>
+    </div>
+    <div class="grid" style="margin-top: 14px;">
+      <section class="card">
+        <h2>حصصي اليوم</h2>
+        <div class="row">
+          <select id="gradeSelect">
+            <option value="">اختر الصف</option>
+          </select>
+          <select id="classSelect">
+            <option value="">اختر الشعبة</option>
+          </select>
+          <button id="loadSchedule">تحميل الجدول</button>
+          <span class="right pill" id="teacherName">—</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>المادة</th><th>الصف/الشعبة</th><th>الحصة</th><th>الوقت</th><th>الغرفة</th></tr>
+          </thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </section>
+
+      <aside class="card">
+        <h2>إدخال الدرجات</h2>
+        <p class="muted">ملاحظة: سيتم إرسال النتيجة إلى الإدارة/المدير تلقائياً.</p>
+        <div class="row">
+          <input id="studentId" placeholder="رقم الطالب" />
+          <input id="subject" placeholder="المادة" />
+          <input id="score" placeholder="الدرجة" type="number" min="0" max="100" />
+          <button id="saveScore">حفظ</button>
+        </div>
+        <p class="muted">سيتم حفظ الدرجات في مجموعة grades لكل طالب.</p>
+      </aside>
+    </div>
+
+    <section class="card">
+      <h2>سجل الدرجات الأخيرة</h2>
+      <table>
+        <thead><tr><th>الطالب</th><th>المادة</th><th>الدرجة</th><th>تاريخ</th></tr></thead>
+        <tbody id="recentGrades"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    // إضافة بيانات وهمية للصفوف والمراحل
+    const GRADES = [
+      { id: 'ثانوي-1', name: 'الصف الأول الثانوي', classes: ['أ', 'ب'] },
+      { id: 'ثانوي-2', name: 'الصف الثاني الثانوي', classes: ['أ', 'ب'] },
+      { id: 'ثانوي-3', name: 'الصف الثالث الثانوي', classes: ['أ', 'ب'] },
+    ];
+
+    // وظيفة عامة لملء قائمة المراحل
+    function populateGrades(selectId) {
+      const select = document.getElementById(selectId);
+      select.innerHTML = '<option value="">اختر المرحلة</option>';
+      GRADES.forEach(grade => {
+        const option = document.createElement('option');
+        option.value = grade.id;
+        option.textContent = grade.name;
+        select.appendChild(option);
+      });
+    }
+
+    // وظيفة لملء قائمة الصفوف والشعب (للحضور)
+    function populateAttendanceGrades() {
+      const select = document.getElementById('attendanceGrade');
+      select.innerHTML = '<option value="">اختر الصف</option>';
+      GRADES.forEach(grade => {
+        const option = document.createElement('option');
+        option.value = grade.id;
+        option.textContent = grade.name;
+        select.appendChild(option);
+      });
+      document.getElementById('attendanceGrade').addEventListener('change', (e) => {
+        const gradeId = e.target.value;
+        const classSelect = document.getElementById('attendanceClass');
+        classSelect.innerHTML = '<option value="">اختر الشعبة</option>';
+        const grade = GRADES.find(g => g.id === gradeId);
+        if (grade) {
+          grade.classes.forEach(cls => {
+            const option = document.createElement('option');
+            option.value = cls;
+            option.textContent = cls;
+            classSelect.appendChild(option);
+          });
+        }
+      });
+    }
+
+    // منطق نشر الواجب/الامتحان
+    document.getElementById('publishAssignment').addEventListener('click', async () => {
+      const type = document.getElementById('assignType').value;
+      const grade = document.getElementById('assignGrade').value;
+      const subject = document.getElementById('assignSubject').value.trim();
+      const link = document.getElementById('assignLink').value.trim();
+      const teacherId = auth?.currentUser?.uid || 'demo-teacher';
+
+      if (!grade || !subject || !link) {
+        alert('الرجاء ملء جميع حقول الواجب/الامتحان.');
+        return;
+      }
+
+      try {
+        // إضافة الواجب/الامتحان إلى قاعدة البيانات
+        await db.collection('assignments').add({
+          type, grade, subject, link, teacherId,
+          status: 'pending',
+          createdAt: new Date(),
+        });
+
+        // إرسال إشعار (محاكاة)
+        alert(`تم نشر ${type === 'homework' ? 'الواجب' : 'الامتحان'} بنجاح للصف ${grade} في مادة ${subject}. سيتم إرسال إشعار للطلاب.`);
+
+        // مسح الحقول
+        document.getElementById('assignSubject').value = '';
+        document.getElementById('assignLink').value = '';
+
+      } catch (error) {
+        console.error('خطأ في نشر الواجب/الامتحان:', error);
+        alert('حدث خطأ أثناء النشر.');
+      }
+    });
+
+    // منطق تحميل الطلاب لتسجيل الحضور (محاكاة)
+    document.getElementById('loadStudentsForAttendance').addEventListener('click', async () => {
+      const grade = document.getElementById('attendanceGrade').value;
+      const classId = document.getElementById('attendanceClass').value;
+      const tbody = document.getElementById('attendanceBody');
+      tbody.innerHTML = '';
+
+      if (!grade || !classId) {
+        alert('الرجاء اختيار الصف والشعبة أولاً.');
+        return;
+      }
+
+      // محاكاة تحميل قائمة الطلاب
+      const students = [
+        { id: 'S001', name: 'أحمد محمد', uid: 'student-uid-1' },
+        { id: 'S002', name: 'خالد علي', uid: 'student-uid-2' },
+        { id: 'S003', name: 'سارة فهد', uid: 'student-uid-3' },
+      ];
+
+      students.forEach(student => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${student.name} (${student.id})</td>
+          <td>
+            <select id="status-${student.uid}">
+              <option value="present">حاضر</option>
+              <option value="absent">غائب</option>
+              <option value="late">متأخر</option>
+            </select>
+          </td>
+          <td><button class="secondary" onclick="saveSingleAttendance('${student.uid}', '${student.name}')">حفظ</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+
+    // منطق حفظ الحضور والغياب (محاكاة)
+    window.saveSingleAttendance = async (studentUid, studentName) => {
+      const status = document.getElementById(`status-${studentUid}`).value;
+      const date = new Date().toISOString().split('T')[0]; // تاريخ اليوم
+
+      try {
+        // حفظ سجل الغياب في مجموعة attendanceReport للطالب
+        await db.collection('attendanceReport').doc(studentUid).collection('records').add({
+          date,
+          status,
+          teacherId: auth?.currentUser?.uid || 'demo-teacher',
+          grade: document.getElementById('attendanceGrade').value,
+          classId: document.getElementById('attendanceClass').value,
+        });
+
+        alert(`تم حفظ حالة الطالب ${studentName} كـ ${status === 'absent' ? 'غائب' : status === 'late' ? 'متأخر' : 'حاضر'}. سيتم إرسال تقرير للطالب.`);
+      } catch (error) {
+        console.error('خطأ في حفظ الحضور:', error);
+        alert('حدث خطأ أثناء حفظ الحضور والغياب.');
+      }
+    };
+    
+    document.getElementById('saveAttendance').addEventListener('click', () => alert('يرجى استخدام زر "حفظ" بجوار كل طالب لحفظ سجل الغياب.'));
+
+    // روابط وهمية لغرف المحادثة والحساب الشخصي
+    document.getElementById('profileLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      alert('سيتم توجيهك إلى صفحة تعديل الحساب الشخصي وطرق التواصل.');
+    });
+    document.getElementById('chatLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      alert('سيتم توجيهك إلى غرف المحادثة للتواصل مع الطلاب والمعلمين.');
+    });
+
+    // ... (بقية الكود)
+
+    populateGrades('assignGrade');
+    populateAttendanceGrades();
+    const firebaseConfig = { apiKey:"", authDomain:"", projectId:"", appId:"" };
+    let app, db, auth;
+    try { app = firebase.initializeApp(firebaseConfig); db = firebase.firestore(); auth = firebase.auth(); }
+    catch(e){ console.warn('Firebase لم يُهيأ بعد.'); }
+
+    async function populateGradeClass(){
+      if(!db) return;
+      const gradeSel = document.getElementById('gradeSelect');
+      gradeSel.innerHTML = '<option value="">اختر الصف</option>';
+      const gradesSnap = await db.collection('gradesMeta').get();
+      gradesSnap.forEach(g=>{ const opt=document.createElement('option'); opt.value=g.id; opt.textContent=g.data().name||g.id; gradeSel.appendChild(opt); });
+      document.getElementById('classSelect').innerHTML = '<option value="">اختر الشعبة</option>';
+    }
+
+    document.getElementById('gradeSelect').addEventListener('change', async (e)=>{
+      const gradeId = e.target.value; const classSel = document.getElementById('classSelect');
+      classSel.innerHTML = '<option value="">اختر الشعبة</option>';
+      if(!db||!gradeId) return;
+      const classes = await db.collection('gradesMeta').doc(gradeId).collection('classes').get();
+      classes.forEach(c=>{ const opt=document.createElement('option'); opt.value=c.id; opt.textContent=c.data().name||c.id; classSel.appendChild(opt); });
+    });
+
+    document.getElementById('loadSchedule').addEventListener('click', async ()=>{
+      const gradeId=document.getElementById('gradeSelect').value;
+      const classId=document.getElementById('classSelect').value;
+      const tbody=document.getElementById('scheduleBody'); tbody.innerHTML='';
+      if(!db||!gradeId||!classId) return;
+      const teacherUid = auth?.currentUser?.uid || 'demo-teacher';
+      document.getElementById('teacherName').textContent = teacherUid;
+      const q = await db.collection('schedules')
+        .where('gradeId','==',gradeId).where('classId','==',classId).where('teacherId','==',teacherUid).get();
+      q.forEach(doc=>{ const s=doc.data(); const tr=document.createElement('tr');
+        tr.innerHTML = `<td>${s.subject||''}</td><td>${s.gradeId}/${s.classId}</td><td>${s.period||''}</td><td>${s.time||''}</td><td>${s.room||''}</td>`; tbody.appendChild(tr); });
+    });
+
+    document.getElementById('saveScore').addEventListener('click', async ()=>{
+      const studentId=document.getElementById('studentId').value.trim();
+      const subject=document.getElementById('subject').value.trim();
+      const score=Number(document.getElementById('score').value);
+      if(!db||!studentId||!subject||Number.isNaN(score)) return alert('أكمل الحقول');
+      await db.collection('students').doc(studentId).collection('grades').add({ subject, score, createdAt:new Date(), teacherId:auth?.currentUser?.uid||'demo-teacher' });
+      document.getElementById('studentId').value=''; document.getElementById('subject').value=''; document.getElementById('score').value='';
+      loadRecentGrades();
+    });
+
+    async function loadRecentGrades(){
+      const tbody=document.getElementById('recentGrades'); tbody.innerHTML=''; if(!db) return;
+      const q=await db.collectionGroup('grades').orderBy('createdAt','desc').limit(10).get();
+      q.forEach(doc=>{ const g=doc.data(); const tr=document.createElement('tr');
+        const dt=g.createdAt?.toDate?g.createdAt.toDate():g.createdAt;
+        tr.innerHTML = `<td>${g.studentId||doc.ref.parent.parent?.id||''}</td><td>${g.subject||''}</td><td>${g.score||''}</td><td>${dt? new Date(dt).toLocaleString('ar-EG'):''}</td>`; tbody.appendChild(tr); });
+    }
+
+    populateGradeClass(); loadRecentGrades();
+  </script>
+</body>
+</html>

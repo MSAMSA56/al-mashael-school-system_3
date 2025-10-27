@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>نظام المشاعل - اختر دورك</title>
+  <meta name="color-scheme" content="light dark"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #111a2b;
+      --muted: #94a3b8;
+      --text: #e2e8f0;
+      --primary: #22c55e;
+      --primary-600: #16a34a;
+      --student: #3b82f6;
+      --student-600: #2563eb;
+      --teacher: #f59e0b;
+      --teacher-600: #d97706;
+      --admin: #ef4444;
+      --admin-600: #dc2626;
+      --manager: #facc15; /* لون أصفر للنجم */
+      --manager-600: #eab308;
+      --ring: rgba(34,197,94,.35);
+      --shadow: 0 20px 45px rgba(2,6,23,.35);
+    }
+    [data-theme="light"] {
+      --bg: #f6f7fb;
+      --card: #fff;
+      --muted: #475569;
+      --text: #0f172a;
+      --primary: #16a34a;
+      --primary-600: #15803d;
+      --student: #2563eb;
+      --student-600: #1d4ed8;
+      --teacher: #d97706;
+      --teacher-600: #b45309;
+      --admin: #dc2626;
+      --admin-600: #b91c1c;
+      --manager: #eab308;
+      --manager-600: #ca8a04;
+      --ring: rgba(22,163,74,.25);
+      --shadow: 0 18px 36px rgba(15,23,42,.12);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Cairo", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 500px at 90% -10%, rgba(34,197,94,.08), transparent 60%),
+                  radial-gradient(900px 500px at -10% 110%, rgba(59,130,246,.08), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .container {
+      width: 100%;
+      max-width: 900px;
+      text-align: center;
+    }
+    .logo {
+      margin-bottom: 32px;
+    }
+    h1 {
+      font-size: 36px;
+      margin: 0 0 12px 0;
+      font-weight: 700;
+    }
+    .subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 48px;
+    }
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .role-card {
+      background: linear-gradient(180deg, color-mix(in oklab, var(--card), transparent 8%), var(--card));
+      border: 2px solid color-mix(in oklab, var(--text), transparent 88%);
+      border-radius: 20px;
+      padding: 40px 24px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow);
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .role-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 25px 50px rgba(2,6,23,.45);
+    }
+    .role-card.student {
+      border-color: var(--student);
+    }
+    .role-card.student:hover {
+      background: linear-gradient(180deg, color-mix(in oklab, var(--student), transparent 92%), var(--card));
+      border-color: var(--student-600);
+    }
+    .role-card.teacher {
+      border-color: var(--teacher);
+    }
+    .role-card.teacher:hover {
+      background: linear-gradient(180deg, color-mix(in oklab, var(--teacher), transparent 92%), var(--card));
+      border-color: var(--teacher-600);
+    }
+    .role-card.admin {
+      border-color: var(--admin);
+    }
+    .role-card.manager {
+        border-color: var(--manager);
+      }
+      .role-card.manager:hover {
+        background: linear-gradient(180deg, color-mix(in oklab, var(--manager), transparent 92%), var(--card));
+        border-color: var(--manager-600);
+      }
+      .role-card.admin:hover {
+      background: linear-gradient(180deg, color-mix(in oklab, var(--admin), transparent 92%), var(--card));
+      border-color: var(--admin-600);
+    }
+    .role-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin-bottom: 8px;
+    }
+    .student .role-icon {
+      background: linear-gradient(135deg, var(--student), var(--student-600));
+    }
+    .teacher .role-icon {
+      background: linear-gradient(135deg, var(--teacher), var(--teacher-600));
+    }
+    .manager .role-icon {
+        background: linear-gradient(135deg, var(--manager), var(--manager-600));
+      }
+      .admin .role-icon {
+      background: linear-gradient(135deg, var(--admin), var(--admin-600));
+    }
+    .role-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0;
+    }
+    .role-desc {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 0;
+    }
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      padding-top: 24px;
+      border-top: 1px solid color-mix(in oklab, var(--text), transparent 88%);
+    }
+    @media (max-width: 768px) {
+      h1 { font-size: 28px; }
+      .subtitle { font-size: 16px; }
+      .roles-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <h1>🏫 نظام المشاعل</h1>
+      <p class="subtitle">اختر دورك للدخول إلى النظام</p>
+    </div>
+    
+    <div class="roles-grid">
+      <a href="login-student.html" class="role-card student">
+        <div class="role-icon">🎓</div>
+        <h2 class="role-title">طالب</h2>
+        <p class="role-desc">الدخول كطالب لعرض المواد والواجبات</p>
+      </a>
+      
+      <a href="login-teacher.html" class="role-card teacher">
+        <div class="role-icon">👨‍🏫</div>
+        <h2 class="role-title">معلم</h2>
+        <p class="role-desc">الدخول كمعلم لإدارة الفصول والطلاب</p>
+      </a>
+      
+      <a href="login-manager.html" class="role-card manager">
+        <div class="role-icon">⭐</div>
+        <h2 class="role-title">مدير</h2>
+        <p class="role-desc">الدخول كمدير للنظام والمشرف العام</p>
+      </a>
+      <a href="login-manager.html" class="role-card manager">
+        <div class="role-icon">⭐</div>
+        <h2 class="role-title">مدير</h2>
+        <p class="role-desc">الدخول كمدير للنظام والمشرف العام</p>
+      </a>
+      <a href="login-admin.html" class="role-card admin">
+        <div class="role-icon">⚙️</div>
+        <h2 class="role-title">إدارة</h2>
+        <p class="role-desc">الدخول كإدارة للتحكم الكامل بالنظام</p>
+      </a>
+    </div>
+    
+    <div class="footer">
+      <p>© 2025 نظام المشاعل - جميع الحقوق محفوظة</p>
+    </div>
+  </div>
+</body>
+</html>
